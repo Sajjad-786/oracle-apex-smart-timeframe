@@ -1,39 +1,41 @@
 DECLARE
-    -- Anchor date used for timeframe detail (current system date)
-    v_s DATE := SYSDATE;
+    -- Anchor dates for initial rendering
+    v_start_date VARCHAR2(10);
+    v_end_date   VARCHAR2(10);
 BEGIN
     ------------------------------------------------------------------
     -- Initial start filter handling (Rendering / Before Header)
     --
-    -- This block initializes the date range when a predefined
-    -- start option is selected (e.g. "Start with current month").
+    -- Delegates the initial date setup to the central
+    -- timeframe engine using a custom search request.
     ------------------------------------------------------------------
 
     IF :P1410_FILTER_START_OPTION = 'START_CURRENT_MONTH' THEN
 
         ------------------------------------------------------------------
-        -- Set start date to first day of the current month
+        -- Prepare initial date range (current month)
         ------------------------------------------------------------------
-        :P1410_START_DATE :=
-            TO_CHAR(
-                TRUNC(SYSDATE, 'MM')
-              , 'DD.MM.YYYY'
-            );
+        v_start_date := TO_CHAR(TRUNC(SYSDATE, 'MM'), 'DD.MM.YYYY');
+        v_end_date   := TO_CHAR(LAST_DAY(SYSDATE), 'DD.MM.YYYY');
 
         ------------------------------------------------------------------
-        -- Set end date to last day of the current month
+        -- Delegate logic to central timeframe engine
         ------------------------------------------------------------------
-        :P1410_END_DATE :=
-            TO_CHAR(
-                LAST_DAY(SYSDATE)
-              , 'DD.MM.YYYY'
-            );
+        ADMI_UTIL_PKG.pr_get_DATE_RANGE(
+              pi_timeframe_item_name        => 'P1410_TIMEFRAME'
+            , pi_timeframe_detail_item_name => 'P1410_TIMEFRAME_DETAIL'
+            , pi_request                    => 'CUSTOM_SEARCH'
+            , pio_start_date                => v_start_date
+            , pio_end_date                  => v_end_date
+            , pio_timeframe                 => :P1410_TIMEFRAME
+            , pio_timeframe_detail          => :P1410_TIMEFRAME_DETAIL
+        );
 
         ------------------------------------------------------------------
-        -- Initialize timeframe context
+        -- Write back calculated dates
         ------------------------------------------------------------------
-        :P1410_TIMEFRAME        := 'M';          -- Month
-        :P1410_TIMEFRAME_DETAIL := TO_CHAR(v_s, 'MM.YYYY');
+        :P1410_START_DATE := v_start_date;
+        :P1410_END_DATE   := v_end_date;
 
         ------------------------------------------------------------------
         -- Reset start option to avoid re-triggering
